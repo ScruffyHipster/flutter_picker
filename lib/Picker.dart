@@ -913,6 +913,133 @@ class NumberPickerColumn {
   }
 }
 
+class DoublePickerColumn {
+  final List<double> items;
+  final double begin;
+  final double end;
+  final double initValue;
+  final double columnFlex;
+  final double jump;
+  final Widget postfix, suffix;
+  final PickerValueFormat<double> onFormatValue;
+
+  const DoublePickerColumn({
+    this.begin = 0,
+    this.end = 9,
+    this.items,
+    this.initValue,
+    this.jump = 1,
+    this.columnFlex = 1,
+    this.postfix,
+    this.suffix,
+    this.onFormatValue,
+  }) : assert(jump != null);
+
+  int indexOf(double value) {
+    if (value == null) return -1;
+    if (items != null) return items.indexOf(value);
+    if (value < begin || value > end) return -1;
+    return (value - begin) ~/ (this.jump == 0 ? 1 : this.jump);
+  }
+
+  double valueOf(int index) {
+    if (items != null) {
+      return items[index];
+    }
+    return begin + index * (this.jump == 0 ? 1 : this.jump);
+  }
+
+  String getValueText(int index) {
+    return onFormatValue == null
+        ? "${valueOf(index)}"
+        : onFormatValue(valueOf(index));
+  }
+
+  int count() {
+    var v = (end - begin) ~/ (this.jump == 0 ? 1 : this.jump) + 1;
+    if (v < 1) return 0;
+    return v;
+  }
+}
+
+class DoublePickerAdapter extends PickerAdapter<double> {
+  DoublePickerAdapter({this.data}) : assert(data != null);
+
+  final List<DoublePickerColumn> data;
+  DoublePickerColumn cur;
+  int _col = 0;
+
+  @override
+  int getLength() {
+    if (cur == null) return 0;
+    if (cur.items != null) return cur.items.length;
+    return cur.count();
+  }
+
+  @override
+  int getMaxLevel() {
+    return data == null ? 0 : data.length;
+  }
+
+  @override
+  bool getIsLinkage() {
+    return false;
+  }
+
+  @override
+  void setColumn(int index) {
+    if (index != -1 && _col == index + 1)
+      return;
+    _col = index + 1;
+    if (_col >= data.length) {
+      cur = null;
+    } else {
+      cur = data[_col];
+    }
+  }
+
+  @override
+  void initSelects() {
+    int _maxLevel = getMaxLevel();
+    if (picker.selecteds == null || picker.selecteds.length == 0) {
+      if (picker.selecteds == null) picker.selecteds = new List<int>();
+      for (int i = 0; i < _maxLevel; i++) {
+        int v = data[i].indexOf(data[i].initValue);
+        if (v < 0) v = 0;
+        picker.selecteds.add(v);
+      }
+    }
+  }
+
+  @override
+  Widget buildItem(BuildContext context, int index) {
+    if (cur.postfix == null && cur.suffix == null)
+      return makeText(
+          null, cur.getValueText(index), index == picker.selecteds[_col]);
+    else
+      return makeTextEx(null, cur.getValueText(index), cur.postfix, cur.suffix,
+          index == picker.selecteds[_col]);
+  }
+
+  @override
+  int getColumnFlex(int column) {
+    return data[column].columnFlex.round();
+  }
+
+  @override
+  List<double> getSelectedValues() {
+    List<double> _items = [];
+    if (picker.selecteds != null) {
+      for (int i = 0; i < picker.selecteds.length; i++) {
+        int j = picker.selecteds[i];
+        double v = data[i].valueOf(j);
+        _items.add(v);
+      }
+    }
+    return _items;
+  }
+}
+
 class NumberPickerAdapter extends PickerAdapter<int> {
   NumberPickerAdapter({this.data}) : assert(data != null);
 
